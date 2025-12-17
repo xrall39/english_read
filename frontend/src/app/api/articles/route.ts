@@ -1,34 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseManager } from '../../../../database/db_manager';
-
-interface CreateArticleRequest {
-  title: string;
-  content: string;
-  source_url?: string;
-  author?: string;
-  published_date?: string;
-  category?: string;
-  tags?: string[];
-  language?: string;
-}
-
-interface ArticleResponse {
-  id: number;
-  title: string;
-  content: string;
-  source_url?: string;
-  author?: string;
-  published_date?: string;
-  difficulty_level?: string;
-  word_count?: number;
-  sentence_count?: number;
-  flesch_score?: number;
-  category?: string;
-  tags?: string[];
-  language: string;
-  created_at: string;
-  updated_at: string;
-}
+import type {
+  CreateArticleRequest,
+  ArticleResponse,
+  ArticleListResponse,
+} from '@/types/api';
 
 // NLP服务配置
 const NLP_SERVICE_URL = process.env.NLP_SERVICE_URL || 'http://localhost:8000';

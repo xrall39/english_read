@@ -1,23 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseManager } from '../../../../database/db_manager';
 import crypto from 'crypto';
-
-interface TranslateRequest {
-  text: string;
-  target_language?: string;
-  context?: string;
-  use_cache?: boolean;
-}
-
-interface TranslateResponse {
-  original_text: string;
-  translated_text: string;
-  target_language: string;
-  translation_service: string;
-  confidence_score: number;
-  from_cache: boolean;
-  context_hash?: string;
-}
+import type { TranslateRequest, TranslateResponse } from '@/types/api';
 
 // 翻译服务配置
 const TRANSLATION_SERVICES = {

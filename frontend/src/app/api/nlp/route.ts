@@ -1,53 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { NLPAnalysisRequest, NLPAnalysisResponse } from '@/types/api';
 
 // NLP服务配置
 const NLP_SERVICE_URL = process.env.NLP_SERVICE_URL || 'http://localhost:8000';
-
-interface NLPAnalysisRequest {
-  text: string;
-  include_sentences?: boolean;
-  include_pos?: boolean;
-  include_ner?: boolean;
-  include_dependencies?: boolean;
-  include_difficulty?: boolean;
-}
-
-interface NLPAnalysisResponse {
-  text: string;
-  sentences?: Array<{
-    text: string;
-    start: number;
-    end: number;
-    tokens: Array<{
-      text: string;
-      lemma: string;
-      pos: string;
-      tag: string;
-      is_alpha: boolean;
-      is_stop: boolean;
-      start: number;
-      end: number;
-    }>;
-  }>;
-  entities?: Array<{
-    text: string;
-    label: string;
-    start: number;
-    end: number;
-    description: string;
-  }>;
-  difficulty?: {
-    flesch_reading_ease: number;
-    flesch_kincaid_grade: number;
-    automated_readability_index: number;
-    coleman_liau_index: number;
-    gunning_fog: number;
-    smog_index: number;
-    difficulty_level: string;
-  };
-  word_count: number;
-  sentence_count: number;
-}
 
 export async function POST(request: NextRequest) {
   try {

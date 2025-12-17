@@ -1,23 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseManager } from '../../../../../database/db_manager';
-
-interface ArticleResponse {
-  id: number;
-  title: string;
-  content: string;
-  source_url?: string;
-  author?: string;
-  published_date?: string;
-  difficulty_level?: string;
-  word_count?: number;
-  sentence_count?: number;
-  flesch_score?: number;
-  category?: string;
-  tags?: string[];
-  language: string;
-  created_at: string;
-  updated_at: string;
-}
+import type { ArticleResponse, UpdateArticleRequest } from '@/types/api';
 
 export async function GET(
   request: NextRequest,
