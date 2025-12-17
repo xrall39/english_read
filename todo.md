@@ -63,26 +63,26 @@
 - [ ] 翻译服务性能优化
 
 ### 6. 前端基础组件
-- [ ] 创建基础Layout组件
-- [ ] 开发文章阅读器组件
-- [ ] 实现文本选择逻辑
-- [ ] 创建翻译弹窗组件
-- [ ] 添加键盘快捷键支持
+- [x] 创建基础Layout组件（Header.tsx, MainLayout.tsx）
+- [x] 开发文章阅读器组件（Reader.tsx, ArticleContent.tsx等）
+- [x] 实现文本选择逻辑（useTextSelection.ts Hook）
+- [x] 创建翻译弹窗组件（TranslationPopup.tsx）
+- [x] 添加键盘快捷键支持（ESC关闭弹窗）
 
 ## 第三阶段：用户界面开发
 
 ### 7. 阅读器界面
-- [ ] 开发文章导入功能
-- [ ] 实现阅读进度跟踪
-- [ ] 创建阅读历史记录
-- [ ] 添加响应式布局
-- [ ] 实现主题切换功能
+- [x] 开发文章导入功能（/reader页面）
+- [x] 实现阅读进度跟踪（ReadingProgress.tsx）
+- [ ] 创建阅读历史记录页面
+- [x] 添加响应式布局
+- [x] 实现主题切换功能（useTheme.ts Hook）
 
 ### 8. 交互优化
-- [ ] 优化文本选择体验
-- [ ] 改进翻译弹窗定位
-- [ ] 添加动画效果
-- [ ] 实现沉浸式阅读模式
+- [x] 优化文本选择体验
+- [x] 改进翻译弹窗定位（智能避免超出视口）
+- [x] 添加动画效果（弹窗淡入动画）
+- [x] 实现沉浸式阅读模式（ReaderToolbar.tsx）
 
 ## 第四阶段：高级功能
 
@@ -115,7 +115,7 @@
 
 ## 当前进度
 
-### ✅ 已完成（第一阶段）
+### ✅ 已完成（第一阶段 + 第二阶段 + 第三阶段部分）
 - [x] 项目规划和架构设计
 - [x] 初始化Next.js 14项目（App Router）
 - [x] 配置TypeScript和ESLint
@@ -128,30 +128,45 @@
 - [x] 实现数据库管理器和所有CRUD操作
 - [x] 创建Next.js API路由（翻译、NLP、文章管理）
 - [x] 集成本地词典和翻译缓存机制
+- [x] 修复后端依赖（添加spaCy到requirements.txt）
+- [x] 修复数据库SQL注入风险
+- [x] 完善数据库测试覆盖
+- [x] 统一TypeScript类型定义（frontend/src/types/）
+- [x] 创建基础Layout组件（Header、MainLayout）
+- [x] 实现主题切换功能（亮色/深色/系统）
+- [x] 开发文章阅读器组件（Reader、ArticleContent等）
+- [x] 实现阅读进度跟踪和沉浸式阅读模式
+- [x] 创建翻译弹窗组件（TranslationPopup）
+- [x] 实现文本选择Hook（useTextSelection）
+- [x] 开发阅读器页面（/reader）
 
 ### 🔄 正在进行
-- [ ] API功能集成测试 - **当前任务**
-- [ ] 开发前端基础组件（Layout、阅读器）
-- [ ] 实现文本选择和翻译弹窗交互
+- [ ] 创建阅读历史记录页面
+- [ ] 在线翻译API集成
 
 ### 📋 下一步计划
-- [ ] 前端阅读器界面开发
-- [ ] 文本选择和翻译弹窗功能
-- [ ] 生词本系统开发
-- [ ] 用户界面优化和响应式设计
+- [ ] 生词本系统开发（组件、收藏、复习）
+- [ ] 用户认证功能
+- [ ] AI翻译服务集成
+- [ ] 学习统计可视化
 
 ## 技术架构总览
 
 ### 🏗️ 项目结构
 ```
 english_read/
-├── frontend/          # Next.js 14前端应用 ✅
-│   ├── src/app/api/  # API路由层 ✅
-│   └── src/app/      # 页面和组件 🔄
-├── backend/          # Python NLP微服务 ✅
-├── database/         # SQLite数据库层 ✅
-├── docs/            # 项目文档 ✅
-└── test_api.py      # API集成测试 ✅
+├── frontend/                    # Next.js 16前端应用 ✅
+│   ├── src/app/api/            # API路由层 ✅
+│   ├── src/app/reader/         # 阅读器页面 ✅
+│   ├── src/components/layout/  # 布局组件 ✅
+│   ├── src/components/reader/  # 阅读器组件 ✅
+│   ├── src/components/translation/ # 翻译组件 ✅
+│   ├── src/hooks/              # 自定义Hooks ✅
+│   └── src/types/              # TypeScript类型 ✅
+├── backend/                    # Python NLP微服务 ✅
+├── database/                   # SQLite数据库层 ✅
+├── docs/                       # 项目文档 ✅
+└── test_api.py                 # API集成测试 ✅
 ```
 
 ### 🔧 技术栈
@@ -163,12 +178,26 @@ english_read/
 
 ### 📊 开发进度
 - **第一阶段**: 后端基础设施 ✅ (100%)
-- **第二阶段**: 核心翻译功能 🔄 (60%)
-- **第三阶段**: 前端界面开发 📋 (0%)
+- **第二阶段**: 核心翻译功能 ✅ (90%)
+- **第三阶段**: 前端界面开发 🔄 (70%)
 - **第四阶段**: 高级功能 📋 (0%)
 - **第五阶段**: 测试和优化 📋 (0%)
 
 ## 备注
 - ✅ 后端功能已完成（Python NLP微服务 + Next.js API + 数据库）
-- 🔄 当前重点：API测试和前端基础组件开发
-- 📋 下一步：阅读器界面和翻译交互功能
+- ✅ 前端核心功能已完成（阅读器、翻译弹窗、主题切换）
+- 🔄 当前重点：阅读历史页面、在线翻译API集成
+- 📋 下一步：生词本系统、用户认证
+
+## 最近更新记录
+
+### 2024-12-17 更新
+- 修复 `requirements.txt` 缺少 spaCy 依赖
+- 修复 `db_manager.py` SQL注入风险
+- 完善数据库测试覆盖
+- 创建共享TypeScript类型定义 (`frontend/src/types/`)
+- 创建基础Layout组件 (Header, MainLayout)
+- 实现主题切换功能 (useTheme Hook)
+- 开发文章阅读器组件 (Reader, ArticleContent等)
+- 实现文本选择和翻译弹窗功能
+- 创建阅读器页面 (/reader)
