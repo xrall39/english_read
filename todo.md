@@ -74,7 +74,7 @@
 ### 7. 阅读器界面
 - [x] 开发文章导入功能（/reader页面）
 - [x] 实现阅读进度跟踪（ReadingProgress.tsx）
-- [ ] 创建阅读历史记录页面
+- [x] 创建阅读历史记录页面（/history）
 - [x] 添加响应式布局
 - [x] 实现主题切换功能（useTheme.ts Hook）
 
@@ -87,8 +87,10 @@
 ## 第四阶段：高级功能
 
 ### 9. 生词本系统
-- [ ] 开发生词本组件
-- [ ] 实现单词收藏功能
+- [x] 开发生词本组件（VocabularyCard、VocabularyList）
+- [x] 实现单词收藏功能（翻译弹窗集成）
+- [x] 创建生词本页面（/vocabulary）
+- [x] 创建生词本API路由（/api/vocabulary）
 - [ ] 添加学习模式
 - [ ] 创建复习算法
 - [ ] 实现学习进度统计
@@ -115,7 +117,7 @@
 
 ## 当前进度
 
-### ✅ 已完成（第一阶段 + 第二阶段 + 第三阶段部分）
+### ✅ 已完成（第一阶段 + 第二阶段 + 第三阶段 + 第四阶段部分）
 - [x] 项目规划和架构设计
 - [x] 初始化Next.js 14项目（App Router）
 - [x] 配置TypeScript和ESLint
@@ -139,16 +141,21 @@
 - [x] 创建翻译弹窗组件（TranslationPopup）
 - [x] 实现文本选择Hook（useTextSelection）
 - [x] 开发阅读器页面（/reader）
+- [x] 创建阅读历史API路由（/api/history）
+- [x] 创建阅读历史页面（/history）
+- [x] 创建生词本API路由（/api/vocabulary）
+- [x] 创建生词本页面（/vocabulary）
+- [x] 集成翻译弹窗添加生词功能
 
 ### 🔄 正在进行
-- [ ] 创建阅读历史记录页面
 - [ ] 在线翻译API集成
+- [ ] 学习模式开发
 
 ### 📋 下一步计划
-- [ ] 生词本系统开发（组件、收藏、复习）
 - [ ] 用户认证功能
 - [ ] AI翻译服务集成
 - [ ] 学习统计可视化
+- [ ] 复习算法实现
 
 ## 技术架构总览
 
@@ -157,10 +164,19 @@
 english_read/
 ├── frontend/                    # Next.js 16前端应用 ✅
 │   ├── src/app/api/            # API路由层 ✅
+│   │   ├── articles/           # 文章管理API ✅
+│   │   ├── history/            # 阅读历史API ✅
+│   │   ├── nlp/                # NLP分析API ✅
+│   │   ├── translate/          # 翻译API ✅
+│   │   └── vocabulary/         # 生词本API ✅
 │   ├── src/app/reader/         # 阅读器页面 ✅
+│   ├── src/app/history/        # 阅读历史页面 ✅
+│   ├── src/app/vocabulary/     # 生词本页面 ✅
 │   ├── src/components/layout/  # 布局组件 ✅
 │   ├── src/components/reader/  # 阅读器组件 ✅
 │   ├── src/components/translation/ # 翻译组件 ✅
+│   ├── src/components/history/ # 阅读历史组件 ✅
+│   ├── src/components/vocabulary/ # 生词本组件 ✅
 │   ├── src/hooks/              # 自定义Hooks ✅
 │   └── src/types/              # TypeScript类型 ✅
 ├── backend/                    # Python NLP微服务 ✅
@@ -179,19 +195,31 @@ english_read/
 ### 📊 开发进度
 - **第一阶段**: 后端基础设施 ✅ (100%)
 - **第二阶段**: 核心翻译功能 ✅ (90%)
-- **第三阶段**: 前端界面开发 🔄 (70%)
-- **第四阶段**: 高级功能 📋 (0%)
+- **第三阶段**: 前端界面开发 ✅ (100%)
+- **第四阶段**: 高级功能 🔄 (40%)
 - **第五阶段**: 测试和优化 📋 (0%)
 
 ## 备注
 - ✅ 后端功能已完成（Python NLP微服务 + Next.js API + 数据库）
 - ✅ 前端核心功能已完成（阅读器、翻译弹窗、主题切换）
-- 🔄 当前重点：阅读历史页面、在线翻译API集成
-- 📋 下一步：生词本系统、用户认证
+- ✅ 阅读历史和生词本系统已完成
+- 🔄 当前重点：在线翻译API集成、学习模式
+- 📋 下一步：用户认证、AI翻译服务
 
 ## 最近更新记录
 
-### 2024-12-17 更新
+### 2025-12-17 更新（第二次）
+- 创建阅读历史API路由 (`/api/history`)
+- 创建阅读历史页面 (`/history`)
+- 创建阅读历史组件 (HistoryCard, HistoryList)
+- 创建生词本API路由 (`/api/vocabulary`)
+- 创建生词本页面 (`/vocabulary`)
+- 创建生词本组件 (VocabularyCard, VocabularyList)
+- 集成翻译弹窗添加生词功能
+- 支持按掌握程度筛选生词
+- 支持搜索单词和翻译
+
+### 2025-12-17 更新（第一次）
 - 修复 `requirements.txt` 缺少 spaCy 依赖
 - 修复 `db_manager.py` SQL注入风险
 - 完善数据库测试覆盖
