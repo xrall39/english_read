@@ -323,29 +323,37 @@ class DatabaseManager:
 
     def get_user_stats(self, user_id: int, days: int = 30) -> List[Dict]:
         """获取用户学习统计"""
+        # 验证days参数为正整数，防止SQL注入
+        if not isinstance(days, int) or days <= 0:
+            days = 30
         query = '''
             SELECT * FROM learning_stats
-            WHERE user_id = ? AND date >= date('now', '-{} days')
+            WHERE user_id = ? AND date >= date('now', '-' || ? || ' days')
             ORDER BY date DESC
-        '''.format(days)
-        return self.execute_query(query, (user_id,))
+        '''
+        return self.execute_query(query, (user_id, str(days)))
 
     # 数据库维护
     def cleanup_old_cache(self, days: int = 30) -> int:
         """清理旧的翻译缓存"""
+        # 验证days参数为正整数，防止SQL注入
+        if not isinstance(days, int) or days <= 0:
+            days = 30
         query = '''
             DELETE FROM translation_cache
-            WHERE last_used < date('now', '-{} days') AND usage_count = 1
-        '''.format(days)
-        return self.execute_update(query)
+            WHERE last_used < date('now', '-' || ? || ' days') AND usage_count = 1
+        '''
+        return self.execute_update(query, (str(days),))
 
     def get_database_stats(self) -> Dict[str, int]:
         """获取数据库统计信息"""
-        tables = ['users', 'articles', 'vocabulary', 'translation_cache',
-                 'reading_history', 'learning_stats']
+        # 使用白名单验证表名，防止SQL注入
+        allowed_tables = {'users', 'articles', 'vocabulary', 'translation_cache',
+                         'reading_history', 'learning_stats'}
 
         stats = {}
-        for table in tables:
+        for table in allowed_tables:
+            # 表名已通过白名单验证，可以安全使用
             query = f"SELECT COUNT(*) as count FROM {table}"
             result = self.execute_query(query)
             stats[table] = result[0]['count'] if result else 0

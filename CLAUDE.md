@@ -36,23 +36,39 @@ pip install -r requirements.txt
 # 下载spaCy模型
 python -m spacy download en_core_web_sm
 
-# 启动NLP服务
+# 启动NLP服务 (默认端口8000)
 python main.py
 
 # 运行测试
 python simple_test.py
 ```
 
+### 数据库开发命令
+```bash
+# 进入数据库目录
+cd database
+
+# 初始化数据库
+python db_manager.py
+
+# 运行数据库测试
+python test_db.py
+```
+
 ### 项目结构
-- `frontend/` - Next.js 14前端应用
+- `frontend/` - Next.js 16.0.10前端应用
   - `src/app/` - App Router 页面和布局
+  - `src/app/api/` - Next.js API路由层
   - `src/lib/` - 工具函数和共享逻辑
   - `public/` - 静态资源文件
   - 使用 `@/*` 路径别名指向 `./src/*`
-- `backend/` - Python NLP微服务
+- `backend/` - Python NLP微服务 (FastAPI + spaCy)
   - `main.py` - FastAPI应用主文件
   - `requirements.txt` - Python依赖
-- `database/` - 数据库相关文件
+- `database/` - SQLite数据库层
+  - `schema.sql` - 数据库表结构定义
+  - `db_manager.py` - 数据库管理器和CRUD操作
+  - `test_db.py` - 数据库功能测试
 - `docs/` - 项目文档
 
 ## 技术栈配置
@@ -69,8 +85,15 @@ python simple_test.py
 - **lucide-react** - 图标库
 - **tw-animate-css** - Tailwind 动画扩展
 
+### 后端技术
+- **FastAPI** - 异步Web框架
+- **spaCy 3.8.11** + `en_core_web_sm` - NLP处理和英语模型
+- **textstat** - 文本难度评估算法
+- **uvicorn** - ASGI服务器
+- **pydantic** - 数据验证
+
 ### 开发工具
-- **ESLint** - 代码检查，使用 Next.js 推荐配置
+- **ESLint 9** - 代码检查，使用 Next.js 推荐配置
 - **PostCSS** - CSS 处理，配置了 Tailwind CSS v4 插件
 
 ## 样式系统
@@ -82,10 +105,36 @@ python simple_test.py
 - 使用 OKLCH 颜色空间定义颜色变量
 - 预设了完整的设计系统颜色（primary, secondary, muted, accent, destructive 等）
 
+## API架构
+
+### 三层API结构
+1. **Python NLP微服务** (端口8000)
+   - `/analyze` - 完整文本分析（句子分割、词性标注、NER、难度评估）
+   - `/sentences` - 句子提取
+   - `/entities` - 命名实体识别
+   - `/health` - 健康检查
+
+2. **Next.js API路由层** (端口3000)
+   - `/api/nlp` - NLP服务代理和健康检查
+   - `/api/translate` - 翻译服务（本地词典 + 缓存机制）
+   - `/api/articles` - 文章管理（CRUD + 搜索）
+   - `/api/articles/[id]` - 单个文章操作
+
+3. **数据库管理层**
+   - `DatabaseManager`类提供完整CRUD操作
+   - 支持6个核心表：users, articles, vocabulary, translation_cache, reading_history, learning_stats
+   - 事务支持和连接池管理
+
+### 数据库设计
+- **SQLite** (开发环境) → **PostgreSQL** (生产环境)
+- 完整的索引策略和外键约束
+- JSON字段存储复杂数据（用户偏好、标签等）
+- 自动更新触发器和级联删除
+
 ## 开发约定
 
 ### 任务管理
-- 项目根目录下有 todo 文件用于跟踪开发任务
+- 项目根目录下有 `todo.md` 文件用于跟踪开发任务
 - 开发前应将商量好的待办任务添加到文件中
 - 完成任务时标记为已完成以跟踪进度
 - 合理使用 Task 工具创建多个子代理并行开发
@@ -96,9 +145,35 @@ python simple_test.py
 - TypeScript 严格模式已启用
 - 使用 Geist 字体系列（Sans 和 Mono）
 
+### 翻译服务策略
+- **本地词典优先**：100+常用词汇，响应最快
+- **翻译缓存**：上下文感知的缓存机制
+- **在线API预留**：支持Google/百度等翻译服务扩展
+
 ## 配置文件说明
 
 - `next.config.ts` - Next.js 配置（当前为默认配置）
 - `tsconfig.json` - TypeScript 配置，包含路径别名
 - `eslint.config.mjs` - ESLint 配置，使用 Next.js 推荐规则
 - `postcss.config.mjs` - PostCSS 配置，仅包含 Tailwind CSS v4 插件
+- `components.json` - shadcn/ui配置（New York风格）
+
+## 当前开发状态
+
+### 已完成功能 ✅
+- 完整的后端NLP微服务（FastAPI + spaCy）
+- Next.js API路由层（翻译、NLP、文章管理）
+- SQLite数据库设计和管理器
+- 翻译服务基础架构（本地词典 + 缓存）
+- 项目配置和文档
+
+### 当前开发阶段 🔄
+- **第二阶段**：核心翻译功能（60%完成）
+- API功能集成测试
+- 前端基础组件开发准备
+
+### 下一步计划 📋
+- 前端阅读器界面开发
+- 文本选择和翻译弹窗功能
+- 生词本系统开发
+- 用户界面优化和响应式设计
