@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { MainLayout } from '@/components/layout';
 import { Reader } from '@/components/reader';
+import { TranslationPopup } from '@/components/translation';
+import { useTextSelection } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { FileText, Upload, Loader2 } from 'lucide-react';
 import type { ArticleResponse } from '@/types/api';
@@ -39,10 +41,12 @@ export default function ReaderPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [inputText, setInputText] = useState('');
   const [showInput, setShowInput] = useState(false);
+  const readerRef = useRef<HTMLDivElement>(null);
+  const { selection, clearSelection } = useTextSelection(readerRef);
 
-  const handleTextSelect = (selectedText: string, position: { x: number; y: number }) => {
-    console.log('Selected text:', selectedText, 'at position:', position);
-    // 这里将在模块5中实现翻译弹窗功能
+  const handleAddToVocabulary = (word: string, translation: string) => {
+    console.log('Adding to vocabulary:', word, '->', translation);
+    // TODO: 调用API添加到生词本
   };
 
   const handleImportArticle = async () => {
@@ -149,7 +153,7 @@ export default function ReaderPage() {
           </div>
         </div>
       ) : (
-        <div className="relative">
+        <div className="relative" ref={readerRef}>
           {/* 返回按钮 */}
           <div className="mb-4 flex gap-2">
             <button
@@ -165,7 +169,17 @@ export default function ReaderPage() {
           </div>
 
           {/* 阅读器 */}
-          <Reader article={article} onTextSelect={handleTextSelect} />
+          <Reader article={article} />
+
+          {/* 翻译弹窗 */}
+          {selection && (
+            <TranslationPopup
+              text={selection.text}
+              position={selection.position}
+              onClose={clearSelection}
+              onAddToVocabulary={handleAddToVocabulary}
+            />
+          )}
         </div>
       )}
     </MainLayout>
