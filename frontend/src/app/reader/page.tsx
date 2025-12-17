@@ -44,9 +44,30 @@ export default function ReaderPage() {
   const readerRef = useRef<HTMLDivElement>(null);
   const { selection, clearSelection } = useTextSelection(readerRef);
 
-  const handleAddToVocabulary = (word: string, translation: string) => {
-    console.log('Adding to vocabulary:', word, '->', translation);
-    // TODO: 调用API添加到生词本
+  const handleAddToVocabulary = async (word: string, translation: string) => {
+    try {
+      const response = await fetch('/api/vocabulary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: 1,
+          word: word,
+          translation: translation,
+          source_article_id: article?.id,
+          difficulty_level: 1,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('添加失败');
+      }
+
+      console.log('Added to vocabulary:', word, '->', translation);
+    } catch (error) {
+      console.error('Error adding to vocabulary:', error);
+    }
   };
 
   const handleImportArticle = async () => {
