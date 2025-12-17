@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app:*)",
+      "Bash(npx shadcn@latest init:*)",
+      "Bash(tree:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: 完成项目初始化和基础架构搭建\n\n- 初始化Next.js 14项目（App Router）\n- 配置TypeScript和ESLint\n- 设置Tailwind CSS v4\n- 初始化shadcn/ui组件库\n- 创建完整的项目目录结构\n  - components/: UI组件目录\n  - lib/: 工具库和服务目录\n  - types/: TypeScript类型定义\n  - app/api/: API路由目录\n  - app/(dashboard)/: 仪表板页面目录\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(curl:*)",
+      "Bash(git init:*)"
+    ]
+  }
+}

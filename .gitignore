@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+english-read/node_modules/
+nlp-service/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Build outputs
+english-read/.next/
+english-read/out/
+english-read/build/
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Python virtual environment
+venv/
+env/
+.venv/
+
+# Temporary files
+/tmp/
+*.tmp
+*.temp
+
+# NLP models (if large)
+nlp-service/models/
+
+# Test coverage
+coverage/
+.nyc_output/
