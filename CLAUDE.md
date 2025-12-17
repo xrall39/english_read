@@ -7,8 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 开发命令
 
-### 基本开发命令
+### 前端开发命令
 ```bash
+# 进入前端目录
+cd frontend
+
 # 启动开发服务器
 npm run dev
 
@@ -22,11 +25,35 @@ npm start
 npm run lint
 ```
 
+### 后端开发命令
+```bash
+# 进入后端目录
+cd backend
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 下载spaCy模型
+python -m spacy download en_core_web_sm
+
+# 启动NLP服务
+python main.py
+
+# 运行测试
+python simple_test.py
+```
+
 ### 项目结构
-- `src/app/` - Next.js App Router 页面和布局
-- `src/lib/` - 工具函数和共享逻辑
-- `public/` - 静态资源文件
-- 项目使用 `@/*` 路径别名指向 `./src/*`
+- `frontend/` - Next.js 14前端应用
+  - `src/app/` - App Router 页面和布局
+  - `src/lib/` - 工具函数和共享逻辑
+  - `public/` - 静态资源文件
+  - 使用 `@/*` 路径别名指向 `./src/*`
+- `backend/` - Python NLP微服务
+  - `main.py` - FastAPI应用主文件
+  - `requirements.txt` - Python依赖
+- `database/` - 数据库相关文件
+- `docs/` - 项目文档
 
 ## 技术栈配置
 
