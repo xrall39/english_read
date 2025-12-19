@@ -11,6 +11,9 @@ nlp-service/__pycache__/
 english-read/.next/
 english-read/out/
 english-read/build/
+frontend/.next/
+frontend/out/
+frontend/build/
 dist/
 
 # Environment variables
