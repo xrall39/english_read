@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DatabaseManager } from '../../../../database/db_manager';
+// TODO: 需要创建 Node.js 版本的数据库管理器
+// import { DatabaseManager } from '../../../../database/db_manager';
 import type {
   CreateArticleRequest,
   ArticleResponse,
@@ -80,48 +81,30 @@ export async function POST(request: NextRequest) {
     // 分析文章内容
     const analysis = await analyzeArticleContent(body.content);
 
-    // 创建文章
-    const db = new DatabaseManager();
-    const articleId = await db.create_article(
-      body.title,
-      body.content,
-      {
-        source_url: body.source_url,
-        author: body.author,
-        published_date: body.published_date,
-        category: body.category || 'general',
-        tags: body.tags,
-        language: body.language || 'en',
-        ...analysis,
-      }
-    );
+    // TODO: 创建文章 - 暂时返回模拟数据
+    // const db = new DatabaseManager();
+    // const articleId = await db.create_article(...);
 
-    // 获取创建的文章
-    const article = await db.get_article_by_id(articleId);
-
-    if (!article) {
-      return NextResponse.json(
-        { error: '文章创建失败' },
-        { status: 500 }
-      );
-    }
+    // 模拟创建的文章数据
+    const articleId = Math.floor(Math.random() * 10000);
+    const now = new Date().toISOString();
 
     const response: ArticleResponse = {
-      id: article.id,
-      title: article.title,
-      content: article.content,
-      source_url: article.source_url,
-      author: article.author,
-      published_date: article.published_date,
-      difficulty_level: article.difficulty_level,
-      word_count: article.word_count,
-      sentence_count: article.sentence_count,
-      flesch_score: article.flesch_score,
-      category: article.category,
-      tags: article.tags,
-      language: article.language,
-      created_at: article.created_at,
-      updated_at: article.updated_at,
+      id: articleId,
+      title: body.title,
+      content: body.content,
+      source_url: body.source_url,
+      author: body.author,
+      published_date: body.published_date,
+      difficulty_level: analysis.difficulty_level,
+      word_count: analysis.word_count,
+      sentence_count: analysis.sentence_count,
+      flesch_score: analysis.flesch_score,
+      category: body.category || 'general',
+      tags: body.tags,
+      language: body.language || 'en',
+      created_at: now,
+      updated_at: now,
     };
 
     return NextResponse.json(response, { status: 201 });
@@ -153,46 +136,55 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const db = new DatabaseManager();
-    let articles: any[] = [];
+    // TODO: 从数据库获取文章 - 暂时返回模拟数据
+    // const db = new DatabaseManager();
 
+    // 模拟文章数据
+    const mockArticles = [
+      {
+        id: 1,
+        title: "Sample English Article",
+        content: "This is a sample English article for testing purposes. It contains some basic English text to demonstrate the reading functionality.",
+        source_url: "https://example.com/article1",
+        author: "Test Author",
+        published_date: "2024-01-01",
+        difficulty_level: "intermediate",
+        word_count: 25,
+        sentence_count: 2,
+        flesch_score: 65.5,
+        category: "general",
+        tags: ["sample", "test"],
+        language: "en",
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
+      }
+    ];
+
+    // 根据搜索条件过滤（简单实现）
+    let filteredArticles = mockArticles;
     if (search) {
-      // 搜索文章
-      articles = await db.search_articles(search, limit);
-    } else if (difficulty) {
-      // 按难度获取文章
-      articles = await db.get_articles_by_difficulty(difficulty, limit);
-    } else {
-      // 获取所有文章（分页）
-      const offset = (page - 1) * limit;
-      const query = `
-        SELECT * FROM articles
-        ${category ? 'WHERE category = ?' : ''}
-        ORDER BY created_at DESC
-        LIMIT ? OFFSET ?
-      `;
-      const params = category ? [category, limit, offset] : [limit, offset];
-      articles = await db.execute_query(query, params as any);
+      filteredArticles = mockArticles.filter(article =>
+        article.title.toLowerCase().includes(search.toLowerCase()) ||
+        article.content.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    if (difficulty) {
+      filteredArticles = filteredArticles.filter(article =>
+        article.difficulty_level === difficulty
+      );
+    }
+    if (category) {
+      filteredArticles = filteredArticles.filter(article =>
+        article.category === category
+      );
     }
 
+    // 分页
+    const startIndex = (page - 1) * limit;
+    const paginatedArticles = filteredArticles.slice(startIndex, startIndex + limit);
+
     // 格式化响应
-    const formattedArticles: ArticleResponse[] = articles.map(article => ({
-      id: article.id,
-      title: article.title,
-      content: article.content,
-      source_url: article.source_url,
-      author: article.author,
-      published_date: article.published_date,
-      difficulty_level: article.difficulty_level,
-      word_count: article.word_count,
-      sentence_count: article.sentence_count,
-      flesch_score: article.flesch_score,
-      category: article.category,
-      tags: article.tags,
-      language: article.language,
-      created_at: article.created_at,
-      updated_at: article.updated_at,
-    }));
+    const formattedArticles: ArticleResponse[] = paginatedArticles;
 
     return NextResponse.json({
       articles: formattedArticles,

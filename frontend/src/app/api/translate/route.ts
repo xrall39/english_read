@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DatabaseManager } from '../../../../database/db_manager';
 import crypto from 'crypto';
 import type { TranslateRequest, TranslateResponse } from '@/types/api';
 
@@ -14,6 +13,17 @@ const TRANSLATION_SERVICES = {
   // google: { enabled: false, priority: 2 },
   // baidu: { enabled: false, priority: 3 },
 };
+
+// 内存缓存（临时替代数据库缓存）
+const translationCache = new Map<string, {
+  translated_text: string;
+  translation_service: string;
+  confidence_score: number;
+  created_at: number;
+}>();
+
+// 缓存过期时间（1小时）
+const CACHE_EXPIRY_MS = 60 * 60 * 1000;
 
 // 简单的本地词典
 const LOCAL_DICTIONARY: Record<string, string> = {
@@ -77,6 +87,41 @@ function generateContextHash(context?: string): string | undefined {
   return crypto.createHash('md5').update(context).digest('hex').substring(0, 16);
 }
 
+// 生成缓存键
+function generateCacheKey(text: string, targetLanguage: string, contextHash?: string): string {
+  const baseKey = `${text}:${targetLanguage}`;
+  return contextHash ? `${baseKey}:${contextHash}` : baseKey;
+}
+
+// 从内存缓存获取翻译
+function getCachedTranslation(cacheKey: string) {
+  const cached = translationCache.get(cacheKey);
+  if (!cached) return null;
+
+  // 检查是否过期
+  if (Date.now() - cached.created_at > CACHE_EXPIRY_MS) {
+    translationCache.delete(cacheKey);
+    return null;
+  }
+
+  return cached;
+}
+
+// 保存翻译到内存缓存
+function setCachedTranslation(
+  cacheKey: string,
+  translatedText: string,
+  service: string,
+  confidence: number
+) {
+  translationCache.set(cacheKey, {
+    translated_text: translatedText,
+    translation_service: service,
+    confidence_score: confidence,
+    created_at: Date.now(),
+  });
+}
+
 async function translateWithLocalDict(text: string): Promise<string | null> {
   const normalizedText = text.toLowerCase().trim();
   return LOCAL_DICTIONARY[normalizedText] || null;
@@ -137,12 +182,8 @@ export async function POST(request: NextRequest) {
     // 尝试从缓存获取翻译
     if (useCache) {
       try {
-        const db = new DatabaseManager();
-        const cachedTranslation = await db.get_translation(
-          body.text,
-          targetLanguage,
-          contextHash
-        );
+        const cacheKey = generateCacheKey(body.text, targetLanguage, contextHash);
+        const cachedTranslation = getCachedTranslation(cacheKey);
 
         if (cachedTranslation) {
           translationResult = {
@@ -179,14 +220,12 @@ export async function POST(request: NextRequest) {
     // 缓存翻译结果
     if (useCache && translation.confidence > 0) {
       try {
-        const db = new DatabaseManager();
-        await db.cache_translation(
-          body.text,
-          targetLanguage,
+        const cacheKey = generateCacheKey(body.text, targetLanguage, contextHash);
+        setCachedTranslation(
+          cacheKey,
           translation.translated_text,
           translation.service,
-          translation.confidence,
-          contextHash
+          translation.confidence
         );
       } catch (error) {
         console.warn('缓存保存失败:', error);

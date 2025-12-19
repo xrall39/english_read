@@ -83,18 +83,25 @@ except Exception as e:
 // GET: 获取阅读历史
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = parseInt(searchParams.get('user_id') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '20', 10);
-
-    const history = await executePythonDB('get_reading_history', {
-      user_id: userId,
-      limit: limit,
-    });
+    // TODO: 暂时返回模拟数据
+    const mockHistory = [
+      {
+        id: 1,
+        article_id: 1,
+        article_title: "Sample English Article",
+        progress: 75,
+        reading_time: 300,
+        words_looked_up: 5,
+        last_position: 1200,
+        started_at: "2024-01-01T00:00:00Z",
+        last_read_at: "2024-01-01T05:00:00Z",
+        completed: false,
+      }
+    ];
 
     return NextResponse.json({
-      history: history,
-      total: Array.isArray(history) ? history.length : 0,
+      history: mockHistory,
+      total: mockHistory.length,
     });
   } catch (error) {
     console.error('Error fetching reading history:', error);
@@ -109,7 +116,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { user_id = 1, article_id, progress, reading_time, words_looked_up, last_position } = body;
+    const { article_id } = body;
 
     if (!article_id) {
       return NextResponse.json(
@@ -118,16 +125,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await executePythonDB('update_reading_progress', {
-      user_id,
-      article_id,
-      progress: progress || 0,
-      reading_time: reading_time || 0,
-      words_looked_up: words_looked_up || 0,
-      last_position: last_position || 0,
-    });
-
-    return NextResponse.json({ success: true, message: '阅读进度已更新' });
+    // TODO: 暂时返回成功响应
+    return NextResponse.json({ success: true, message: '阅读进度已更新（模拟）' });
   } catch (error) {
     console.error('Error updating reading progress:', error);
     return NextResponse.json(
@@ -141,7 +140,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { user_id = 1, article_id, comprehension_score } = body;
+    const { article_id } = body;
 
     if (!article_id) {
       return NextResponse.json(
@@ -150,13 +149,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    await executePythonDB('mark_article_completed', {
-      user_id,
-      article_id,
-      comprehension_score,
-    });
-
-    return NextResponse.json({ success: true, message: '文章已标记为完成' });
+    // TODO: 暂时返回成功响应
+    return NextResponse.json({ success: true, message: '文章已标记为完成（模拟）' });
   } catch (error) {
     console.error('Error marking article completed:', error);
     return NextResponse.json(
@@ -170,7 +164,6 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = parseInt(searchParams.get('user_id') || '1', 10);
     const articleId = parseInt(searchParams.get('article_id') || '0', 10);
 
     if (!articleId) {
@@ -180,12 +173,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await executePythonDB('delete_reading_history', {
-      user_id: userId,
-      article_id: articleId,
-    });
-
-    return NextResponse.json({ success: true, message: '阅读历史已删除' });
+    // TODO: 暂时返回成功响应
+    return NextResponse.json({ success: true, message: '阅读历史已删除（模拟）' });
   } catch (error) {
     console.error('Error deleting reading history:', error);
     return NextResponse.json(

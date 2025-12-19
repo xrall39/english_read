@@ -103,39 +103,24 @@ except Exception as e:
 // GET: 获取生词本
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = parseInt(searchParams.get('user_id') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
-    const masteryLevel = searchParams.get('mastery_level');
-    const keyword = searchParams.get('keyword');
-
-    let vocabulary;
-
-    if (keyword) {
-      // 搜索生词
-      vocabulary = await executePythonDB('search_vocabulary', {
-        user_id: userId,
-        keyword: keyword,
-        limit: limit,
-      });
-    } else if (masteryLevel) {
-      // 按掌握程度筛选
-      vocabulary = await executePythonDB('get_vocabulary_by_mastery', {
-        user_id: userId,
-        mastery_level: parseInt(masteryLevel, 10),
-        limit: limit,
-      });
-    } else {
-      // 获取全部生词
-      vocabulary = await executePythonDB('get_user_vocabulary', {
-        user_id: userId,
-        limit: limit,
-      });
-    }
+    // TODO: 暂时返回模拟数据
+    const mockVocabulary = [
+      {
+        id: 1,
+        word: "example",
+        definition: "a thing characteristic of its kind or illustrating a general rule",
+        pronunciation: "/ɪɡˈzæmpəl/",
+        translation: "例子，示例",
+        mastery_level: 2,
+        difficulty_level: 1,
+        first_encountered: "2024-01-01T00:00:00Z",
+        last_reviewed: "2024-01-02T00:00:00Z",
+      }
+    ];
 
     return NextResponse.json({
-      vocabulary: vocabulary,
-      total: Array.isArray(vocabulary) ? vocabulary.length : 0,
+      vocabulary: mockVocabulary,
+      total: mockVocabulary.length,
     });
   } catch (error) {
     console.error('Error fetching vocabulary:', error);
@@ -150,18 +135,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      user_id = 1,
-      word,
-      definition,
-      pronunciation,
-      example_sentence,
-      translation,
-      difficulty_level,
-      source_article_id,
-      context,
-      word_type,
-    } = body;
+    const { word } = body;
 
     if (!word) {
       return NextResponse.json(
@@ -170,23 +144,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await executePythonDB('add_vocabulary', {
-      user_id,
-      word,
-      definition,
-      pronunciation,
-      example_sentence,
-      translation,
-      difficulty_level,
-      source_article_id,
-      context,
-      word_type,
-    });
-
+    // TODO: 暂时返回成功响应
     return NextResponse.json({
       success: true,
-      message: '生词已添加',
-      ...(typeof result === 'object' ? result : {}),
+      message: '生词已添加（模拟）',
+      id: Math.floor(Math.random() * 10000),
     });
   } catch (error) {
     console.error('Error adding vocabulary:', error);
@@ -201,7 +163,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { vocab_id, mastery_level, correct = true } = body;
+    const { vocab_id, mastery_level } = body;
 
     if (!vocab_id || mastery_level === undefined) {
       return NextResponse.json(
@@ -210,13 +172,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    await executePythonDB('update_vocabulary_mastery', {
-      vocab_id,
-      mastery_level,
-      correct,
-    });
-
-    return NextResponse.json({ success: true, message: '掌握程度已更新' });
+    // TODO: 暂时返回成功响应
+    return NextResponse.json({ success: true, message: '掌握程度已更新（模拟）' });
   } catch (error) {
     console.error('Error updating vocabulary mastery:', error);
     return NextResponse.json(
@@ -230,7 +187,6 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = parseInt(searchParams.get('user_id') || '1', 10);
     const vocabId = parseInt(searchParams.get('vocab_id') || '0', 10);
 
     if (!vocabId) {
@@ -240,12 +196,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await executePythonDB('delete_vocabulary', {
-      user_id: userId,
-      vocab_id: vocabId,
-    });
-
-    return NextResponse.json({ success: true, message: '生词已删除' });
+    // TODO: 暂时返回成功响应
+    return NextResponse.json({ success: true, message: '生词已删除（模拟）' });
   } catch (error) {
     console.error('Error deleting vocabulary:', error);
     return NextResponse.json(
