@@ -119,6 +119,8 @@ python test_db.py
    - `/api/translate` - 翻译服务（本地词典 + 缓存机制）
    - `/api/articles` - 文章管理（CRUD + 搜索）
    - `/api/articles/[id]` - 单个文章操作
+   - `/api/history` - 阅读历史管理
+   - `/api/vocabulary` - 生词本管理
 
 3. **数据库管理层**
    - `DatabaseManager`类提供完整CRUD操作
@@ -158,22 +160,6 @@ python test_db.py
 - `postcss.config.mjs` - PostCSS 配置，仅包含 Tailwind CSS v4 插件
 - `components.json` - shadcn/ui配置（New York风格）
 
-## 当前开发状态
+## 环境变量
 
-### 已完成功能 ✅
-- 完整的后端NLP微服务（FastAPI + spaCy）
-- Next.js API路由层（翻译、NLP、文章管理）
-- SQLite数据库设计和管理器
-- 翻译服务基础架构（本地词典 + 缓存）
-- 项目配置和文档
-
-### 当前开发阶段 🔄
-- **第二阶段**：核心翻译功能（60%完成）
-- API功能集成测试
-- 前端基础组件开发准备
-
-### 下一步计划 📋
-- 前端阅读器界面开发
-- 文本选择和翻译弹窗功能
-- 生词本系统开发
-- 用户界面优化和响应式设计
+- `NLP_SERVICE_URL` - Python NLP服务地址（默认：`http://localhost:8000`）
