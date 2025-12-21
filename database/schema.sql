@@ -51,6 +51,11 @@ CREATE TABLE IF NOT EXISTS vocabulary (
     source_article_id INTEGER,
     context TEXT, -- 遇到这个词的上下文
     word_type VARCHAR(20), -- noun, verb, adjective等
+    -- 间隔重复算法字段
+    next_review DATETIME, -- 下次复习时间
+    ease_factor REAL DEFAULT 2.5, -- 难度因子 (SM-2算法)
+    interval_days INTEGER DEFAULT 0, -- 当前间隔天数
+    consecutive_correct INTEGER DEFAULT 0, -- 连续正确次数
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (source_article_id) REFERENCES articles(id) ON DELETE SET NULL,
     UNIQUE(user_id, word)
@@ -106,6 +111,20 @@ CREATE TABLE IF NOT EXISTS learning_stats (
     UNIQUE(user_id, date)
 );
 
+-- 学习会话表（间隔重复学习系统）
+CREATE TABLE IF NOT EXISTS learning_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    session_type VARCHAR(20) NOT NULL,  -- 'learn' 新学习 或 'review' 复习
+    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    ended_at DATETIME,
+    words_studied INTEGER DEFAULT 0,     -- 学习的单词数
+    words_correct INTEGER DEFAULT 0,     -- 正确数
+    words_incorrect INTEGER DEFAULT 0,   -- 错误数
+    duration_seconds INTEGER DEFAULT 0,  -- 学习时长（秒）
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- 创建索引以提高查询性能
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
@@ -127,6 +146,14 @@ CREATE INDEX IF NOT EXISTS idx_reading_history_article_id ON reading_history(art
 CREATE INDEX IF NOT EXISTS idx_reading_history_started_at ON reading_history(started_at);
 
 CREATE INDEX IF NOT EXISTS idx_learning_stats_user_date ON learning_stats(user_id, date);
+
+-- 间隔重复学习相关索引
+CREATE INDEX IF NOT EXISTS idx_vocabulary_next_review ON vocabulary(next_review);
+CREATE INDEX IF NOT EXISTS idx_vocabulary_user_next_review ON vocabulary(user_id, next_review);
+CREATE INDEX IF NOT EXISTS idx_vocabulary_user_mastery ON vocabulary(user_id, mastery_level);
+CREATE INDEX IF NOT EXISTS idx_learning_sessions_user ON learning_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_learning_sessions_date ON learning_sessions(started_at);
+CREATE INDEX IF NOT EXISTS idx_learning_sessions_user_date ON learning_sessions(user_id, started_at);
 
 -- 创建触发器自动更新updated_at字段
 CREATE TRIGGER IF NOT EXISTS update_users_updated_at

@@ -222,6 +222,11 @@ export interface VocabularyItem {
   source_article_id?: number;
   context?: string;
   word_type?: string;
+  // 间隔重复算法字段
+  next_review?: string;
+  ease_factor?: number;
+  interval_days?: number;
+  consecutive_correct?: number;
 }
 
 /** 添加生词请求 */
@@ -304,3 +309,91 @@ export interface PaginatedResponse<T> {
   limit: number;
   total_pages: number;
 }
+
+// ============================================
+// 学习模式相关类型
+// ============================================
+
+/** 回答质量评分 (0-5) */
+export type ResponseQuality = 0 | 1 | 2 | 3 | 4 | 5;
+
+/** 学习模式 */
+export type LearningMode = 'simple' | 'advanced';
+
+/** 学习会话类型 */
+export type SessionType = 'learn' | 'review';
+
+/** 学习会话 */
+export interface LearningSession {
+  id: number;
+  user_id: number;
+  session_type: SessionType;
+  started_at: string;
+  ended_at?: string;
+  words_studied: number;
+  words_correct: number;
+  words_incorrect: number;
+  duration_seconds: number;
+}
+
+/** 记录学习结果请求 */
+export interface RecordLearningRequest {
+  user_id: number;
+  vocab_id: number;
+  quality: ResponseQuality;
+  response_time_ms?: number;
+}
+
+/** 记录学习结果响应 */
+export interface RecordLearningResponse {
+  success: boolean;
+  vocab_id: number;
+  next_review: string;
+  new_mastery_level: number;
+  new_interval_days: number;
+  is_correct: boolean;
+}
+
+/** 获取学习单词请求参数 */
+export interface GetLearningWordsParams {
+  user_id: number;
+  mode: SessionType;
+  limit?: number;
+}
+
+/** 学习统计摘要 */
+export interface LearningStatsSummary {
+  today: {
+    words_learned: number;
+    vocabulary_reviewed: number;
+    accuracy_rate: number;
+    reading_time: number;
+  };
+  mastery_distribution: Record<string, number>;
+  weekly_trend: Array<{
+    date: string;
+    words_learned: number;
+    vocabulary_reviewed: number;
+    accuracy_rate: number;
+  }>;
+  due_for_review: number;
+  streak_days: number;
+  total_words: number;
+}
+
+/** 创建学习会话请求 */
+export interface CreateSessionRequest {
+  user_id: number;
+  session_type: SessionType;
+}
+
+/** 结束学习会话请求 */
+export interface EndSessionRequest {
+  session_id: number;
+  user_id: number;
+  words_studied: number;
+  words_correct: number;
+  words_incorrect: number;
+  duration_seconds: number;
+}
+

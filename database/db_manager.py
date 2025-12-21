@@ -6,7 +6,7 @@
 
 import sqlite3
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 from contextlib import contextmanager
@@ -349,7 +349,7 @@ class DatabaseManager:
         """获取数据库统计信息"""
         # 使用白名单验证表名，防止SQL注入
         allowed_tables = {'users', 'articles', 'vocabulary', 'translation_cache',
-                         'reading_history', 'learning_stats'}
+                         'reading_history', 'learning_stats', 'learning_sessions'}
 
         stats = {}
         for table in allowed_tables:
@@ -359,3 +359,278 @@ class DatabaseManager:
             stats[table] = result[0]['count'] if result else 0
 
         return stats
+
+    # ============================================
+    # 间隔重复学习系统相关操作
+    # ============================================
+
+    def get_words_for_review(self, user_id: int, limit: int = 20) -> List[Dict]:
+        """
+        获取需要复习的单词（按优先级排序）
+
+        优先级规则：
+        1. 从未复习过的单词（next_review IS NULL）
+        2. 已过期需要复习的单词（next_review <= 当前时间）
+        3. 按过期时间和掌握程度排序
+        """
+        query = '''
+            SELECT * FROM vocabulary
+            WHERE user_id = ?
+            AND (next_review IS NULL OR next_review <= datetime('now'))
+            ORDER BY
+                CASE WHEN next_review IS NULL THEN 0 ELSE 1 END,
+                next_review ASC,
+                mastery_level ASC
+            LIMIT ?
+        '''
+        return self.execute_query(query, (user_id, limit))
+
+    def get_new_words_for_learning(self, user_id: int, limit: int = 10) -> List[Dict]:
+        """
+        获取新单词用于学习（从未复习过的单词）
+        """
+        query = '''
+            SELECT * FROM vocabulary
+            WHERE user_id = ?
+            AND review_count = 0
+            ORDER BY first_encountered DESC
+            LIMIT ?
+        '''
+        return self.execute_query(query, (user_id, limit))
+
+    def update_vocabulary_review(self, vocab_id: int, next_review: str,
+                                ease_factor: float, interval_days: int,
+                                mastery_level: int, consecutive_correct: int,
+                                correct: bool) -> None:
+        """
+        更新单词复习结果（间隔重复算法）
+
+        Args:
+            vocab_id: 词汇ID
+            next_review: 下次复习时间 (ISO格式字符串)
+            ease_factor: 新的难度因子
+            interval_days: 新的间隔天数
+            mastery_level: 新的掌握程度
+            consecutive_correct: 连续正确次数
+            correct: 本次是否回答正确
+        """
+        query = '''
+            UPDATE vocabulary
+            SET next_review = ?,
+                ease_factor = ?,
+                interval_days = ?,
+                mastery_level = ?,
+                consecutive_correct = ?,
+                last_reviewed = CURRENT_TIMESTAMP,
+                review_count = review_count + 1,
+                correct_count = correct_count + ?
+            WHERE id = ?
+        '''
+        self.execute_update(query, (
+            next_review, ease_factor, interval_days,
+            mastery_level, consecutive_correct,
+            1 if correct else 0, vocab_id
+        ))
+
+    def get_due_review_count(self, user_id: int) -> int:
+        """获取待复习单词数量"""
+        query = '''
+            SELECT COUNT(*) as count
+            FROM vocabulary
+            WHERE user_id = ?
+            AND (next_review IS NULL OR next_review <= datetime('now'))
+        '''
+        result = self.execute_query(query, (user_id,))
+        return result[0]['count'] if result else 0
+
+    def get_mastery_distribution(self, user_id: int) -> Dict[int, int]:
+        """获取掌握程度分布"""
+        query = '''
+            SELECT mastery_level, COUNT(*) as count
+            FROM vocabulary
+            WHERE user_id = ?
+            GROUP BY mastery_level
+            ORDER BY mastery_level
+        '''
+        results = self.execute_query(query, (user_id,))
+        return {row['mastery_level']: row['count'] for row in results}
+
+    def get_learning_stats_summary(self, user_id: int) -> Dict:
+        """
+        获取学习统计摘要
+
+        Returns:
+            包含今日统计、掌握程度分布、待复习数量等信息
+        """
+        # 今日统计
+        today_query = '''
+            SELECT
+                COALESCE(SUM(words_learned), 0) as words_learned,
+                COALESCE(SUM(vocabulary_reviewed), 0) as vocabulary_reviewed,
+                COALESCE(AVG(accuracy_rate), 0) as accuracy_rate,
+                COALESCE(SUM(reading_time), 0) as reading_time
+            FROM learning_stats
+            WHERE user_id = ? AND date = date('now')
+        '''
+        today_result = self.execute_query(today_query, (user_id,))
+        today = today_result[0] if today_result else {
+            'words_learned': 0,
+            'vocabulary_reviewed': 0,
+            'accuracy_rate': 0,
+            'reading_time': 0
+        }
+
+        # 掌握程度分布
+        mastery = self.get_mastery_distribution(user_id)
+
+        # 待复习数量
+        due_count = self.get_due_review_count(user_id)
+
+        # 连续学习天数
+        streak = self.get_learning_streak(user_id)
+
+        return {
+            'today': today,
+            'mastery_distribution': mastery,
+            'due_for_review': due_count,
+            'streak_days': streak
+        }
+
+    def get_learning_streak(self, user_id: int) -> int:
+        """计算连续学习天数"""
+        query = '''
+            SELECT date FROM learning_stats
+            WHERE user_id = ?
+            AND (words_learned > 0 OR vocabulary_reviewed > 0)
+            ORDER BY date DESC
+        '''
+        results = self.execute_query(query, (user_id,))
+
+        if not results:
+            return 0
+
+        streak = 0
+        today = date.today()
+
+        for i, row in enumerate(results):
+            # 解析日期字符串
+            if isinstance(row['date'], str):
+                row_date = datetime.strptime(row['date'], '%Y-%m-%d').date()
+            else:
+                row_date = row['date']
+
+            expected_date = today - timedelta(days=i)
+
+            if row_date == expected_date:
+                streak += 1
+            else:
+                break
+
+        return streak
+
+    def get_weekly_trend(self, user_id: int, days: int = 7) -> List[Dict]:
+        """获取学习趋势数据"""
+        if not isinstance(days, int) or days <= 0:
+            days = 7
+        query = '''
+            SELECT date, words_learned, vocabulary_reviewed, accuracy_rate
+            FROM learning_stats
+            WHERE user_id = ? AND date >= date('now', '-' || ? || ' days')
+            ORDER BY date ASC
+        '''
+        return self.execute_query(query, (user_id, str(days)))
+
+    # 学习会话相关操作
+    def create_learning_session(self, user_id: int, session_type: str) -> int:
+        """创建新的学习会话"""
+        query = '''
+            INSERT INTO learning_sessions (user_id, session_type)
+            VALUES (?, ?)
+        '''
+        return self.execute_insert(query, (user_id, session_type))
+
+    def update_learning_session(self, session_id: int, words_studied: int,
+                               words_correct: int, words_incorrect: int,
+                               duration_seconds: int) -> None:
+        """更新学习会话统计"""
+        query = '''
+            UPDATE learning_sessions
+            SET words_studied = ?,
+                words_correct = ?,
+                words_incorrect = ?,
+                duration_seconds = ?,
+                ended_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        '''
+        self.execute_update(query, (
+            words_studied, words_correct, words_incorrect,
+            duration_seconds, session_id
+        ))
+
+    def get_active_session(self, user_id: int) -> Optional[Dict]:
+        """获取用户当前活跃的学习会话"""
+        query = '''
+            SELECT * FROM learning_sessions
+            WHERE user_id = ? AND ended_at IS NULL
+            ORDER BY started_at DESC
+            LIMIT 1
+        '''
+        results = self.execute_query(query, (user_id,))
+        return results[0] if results else None
+
+    def get_today_sessions(self, user_id: int) -> List[Dict]:
+        """获取今日学习会话"""
+        query = '''
+            SELECT * FROM learning_sessions
+            WHERE user_id = ? AND date(started_at) = date('now')
+            ORDER BY started_at DESC
+        '''
+        return self.execute_query(query, (user_id,))
+
+    def increment_daily_stats(self, user_id: int, words_learned: int = 0,
+                             vocabulary_reviewed: int = 0,
+                             correct_count: int = 0, total_count: int = 0) -> None:
+        """
+        增量更新每日学习统计
+
+        如果今日记录不存在则创建，存在则累加
+        """
+        today = date.today()
+
+        # 计算准确率
+        accuracy = (correct_count / total_count * 100) if total_count > 0 else 0
+
+        # 检查今日记录是否存在
+        check_query = '''
+            SELECT id, words_learned, vocabulary_reviewed, accuracy_rate
+            FROM learning_stats
+            WHERE user_id = ? AND date = ?
+        '''
+        existing = self.execute_query(check_query, (user_id, today))
+
+        if existing:
+            # 更新现有记录
+            record = existing[0]
+            new_words = record['words_learned'] + words_learned
+            new_reviewed = record['vocabulary_reviewed'] + vocabulary_reviewed
+            # 计算加权平均准确率
+            old_total = record['vocabulary_reviewed']
+            new_total = old_total + total_count
+            if new_total > 0:
+                new_accuracy = (record['accuracy_rate'] * old_total + accuracy * total_count) / new_total
+            else:
+                new_accuracy = 0
+
+            update_query = '''
+                UPDATE learning_stats
+                SET words_learned = ?, vocabulary_reviewed = ?, accuracy_rate = ?
+                WHERE id = ?
+            '''
+            self.execute_update(update_query, (new_words, new_reviewed, new_accuracy, record['id']))
+        else:
+            # 创建新记录
+            insert_query = '''
+                INSERT INTO learning_stats (user_id, date, words_learned, vocabulary_reviewed, accuracy_rate)
+                VALUES (?, ?, ?, ?, ?)
+            '''
+            self.execute_insert(insert_query, (user_id, today, words_learned, vocabulary_reviewed, accuracy))

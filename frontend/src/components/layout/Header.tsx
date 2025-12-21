@@ -65,10 +65,22 @@ export function Header({ className }: HeaderProps) {
             生词本
           </a>
           <a
+            href="/learn"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            学习
+          </a>
+          <a
+            href="/stats"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            统计
+          </a>
+          <a
             href="/history"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            阅读历史
+            历史
           </a>
         </nav>
 
