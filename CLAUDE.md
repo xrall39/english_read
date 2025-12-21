@@ -55,10 +55,24 @@ python db_manager.py
 python test_db.py
 ```
 
+### 集成测试命令
+```bash
+# 在项目根目录运行 API 集成测试
+python test_api.py
+```
+
 ### 项目结构
 - `frontend/` - Next.js 16.0.10前端应用
   - `src/app/` - App Router 页面和布局
   - `src/app/api/` - Next.js API路由层
+  - `src/components/` - React 组件库
+    - `layout/` - 布局组件（Header, MainLayout）
+    - `reader/` - 阅读器组件（Reader, ArticleContent, ReaderToolbar）
+    - `translation/` - 翻译组件（TranslationPopup）
+    - `history/` - 阅读历史组件（HistoryCard, HistoryList）
+    - `vocabulary/` - 生词本组件（VocabularyCard, VocabularyList）
+  - `src/hooks/` - 自定义 Hooks（useTextSelection, useTheme）
+  - `src/types/` - TypeScript 类型定义（api.ts）
   - `src/lib/` - 工具函数和共享逻辑
   - `public/` - 静态资源文件
   - 使用 `@/*` 路径别名指向 `./src/*`
@@ -106,6 +120,12 @@ python test_db.py
 - 预设了完整的设计系统颜色（primary, secondary, muted, accent, destructive 等）
 
 ## API架构
+
+### 前端页面路由
+- `/` - 首页
+- `/reader` - 文章阅读器
+- `/history` - 阅读历史
+- `/vocabulary` - 生词本
 
 ### 三层API结构
 1. **Python NLP微服务** (端口8000)

@@ -6,7 +6,7 @@
 
 ```
 english_read/
-├── frontend/           # Next.js 14前端应用
+├── frontend/           # Next.js 16前端应用
 │   ├── src/
 │   │   ├── app/       # App Router页面
 │   │   ├── components/ # React组件
@@ -29,7 +29,7 @@ english_read/
 ## 技术栈
 
 ### 前端 (Frontend)
-- **Next.js 14** - React框架，使用App Router
+- **Next.js 16** - React框架，使用App Router
 - **TypeScript** - 类型安全
 - **Tailwind CSS v4** - 样式框架
 - **shadcn/ui** - UI组件库工具函数
