@@ -3,7 +3,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-这是一个基于 Next.js 14 的英语阅读应用，使用 App Router 架构。项目采用 TypeScript 开发，使用 Tailwind CSS v4 进行样式设计，并集成了 shadcn/ui 组件库的工具函数。
+这是一个基于 Next.js 16 的英语阅读应用，使用 App Router 架构。项目采用 TypeScript 开发，使用 Tailwind CSS v4 进行样式设计，并集成了 shadcn/ui 组件库的工具函数。
 
 ## 开发命令
 
@@ -71,6 +71,7 @@ python test_api.py
     - `translation/` - 翻译组件（TranslationPopup）
     - `history/` - 阅读历史组件（HistoryCard, HistoryList）
     - `vocabulary/` - 生词本组件（VocabularyCard, VocabularyList）
+    - `learn/` - 学习模式组件（FlashCard, LearningControls, LearningProgress, LearningComplete）
   - `src/hooks/` - 自定义 Hooks（useTextSelection, useTheme）
   - `src/types/` - TypeScript 类型定义（api.ts）
   - `src/lib/` - 工具函数和共享逻辑
@@ -126,6 +127,8 @@ python test_api.py
 - `/reader` - 文章阅读器
 - `/history` - 阅读历史
 - `/vocabulary` - 生词本
+- `/learn` - 学习模式
+- `/stats` - 学习统计
 
 ### 三层API结构
 1. **Python NLP微服务** (端口8000)
@@ -141,10 +144,12 @@ python test_api.py
    - `/api/articles/[id]` - 单个文章操作
    - `/api/history` - 阅读历史管理
    - `/api/vocabulary` - 生词本管理
+   - `/api/learn` - 学习模式（获取待复习单词、更新学习进度）
+   - `/api/stats` - 学习统计数据
 
 3. **数据库管理层**
    - `DatabaseManager`类提供完整CRUD操作
-   - 支持6个核心表：users, articles, vocabulary, translation_cache, reading_history, learning_stats
+   - 支持7个核心表：users, articles, vocabulary, translation_cache, reading_history, learning_stats, learning_sessions
    - 事务支持和连接池管理
 
 ### 数据库设计
@@ -171,6 +176,11 @@ python test_api.py
 - **本地词典优先**：100+常用词汇，响应最快
 - **翻译缓存**：上下文感知的缓存机制
 - **在线API预留**：支持Google/百度等翻译服务扩展
+
+### 学习算法
+- **SM-2间隔重复算法**：基于艾宾浩斯遗忘曲线的复习调度
+- 算法实现位于 `frontend/src/lib/spaced-repetition.ts`
+- 支持简单模式（认识/不认识）和高级模式（0-5评分）
 
 ## 配置文件说明
 
