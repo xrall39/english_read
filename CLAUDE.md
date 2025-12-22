@@ -174,8 +174,9 @@ python test_api.py
 
 ### 翻译服务策略
 - **本地词典优先**：100+常用词汇，响应最快
+- **DeepLX翻译**：支持DeepLX翻译服务（需配置`DEEPLX_API_URL`）
 - **翻译缓存**：上下文感知的缓存机制
-- **在线API预留**：支持Google/百度等翻译服务扩展
+- **降级策略**：本地词典 → DeepLX → 返回未找到提示
 
 ### 学习算法
 - **SM-2间隔重复算法**：基于艾宾浩斯遗忘曲线的复习调度
@@ -193,3 +194,4 @@ python test_api.py
 ## 环境变量
 
 - `NLP_SERVICE_URL` - Python NLP服务地址（默认：`http://localhost:8000`）
+- `DEEPLX_API_URL` - DeepLX翻译服务地址（可选，如：`http://localhost:1188/translate`）

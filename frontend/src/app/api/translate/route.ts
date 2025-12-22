@@ -127,6 +127,30 @@ async function translateWithLocalDict(text: string): Promise<string | null> {
   return LOCAL_DICTIONARY[normalizedText] || null;
 }
 
+// DeepLX 翻译服务
+async function translateWithDeepLX(text: string, targetLang: string): Promise<string | null> {
+  const apiUrl = process.env.DEEPLX_API_URL;
+  if (!apiUrl) return null;
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        source_lang: 'EN',
+        target_lang: targetLang.toUpperCase() === 'ZH' ? 'ZH' : targetLang.toUpperCase(),
+      }),
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.data || null;
+  } catch {
+    return null;
+  }
+}
+
 async function translateText(
   text: string,
   targetLanguage: string = 'zh',
@@ -136,7 +160,7 @@ async function translateText(
   service: string;
   confidence: number;
 }> {
-  // 尝试本地词典
+  // 1. 尝试本地词典（优先级最高）
   const localTranslation = await translateWithLocalDict(text);
   if (localTranslation) {
     return {
@@ -146,7 +170,17 @@ async function translateText(
     };
   }
 
-  // 如果本地词典没有，返回原文（后续可以集成在线翻译服务）
+  // 2. 尝试 DeepLX 翻译服务
+  const deeplxTranslation = await translateWithDeepLX(text, targetLanguage);
+  if (deeplxTranslation) {
+    return {
+      translated_text: deeplxTranslation,
+      service: 'deeplx',
+      confidence: 0.95,
+    };
+  }
+
+  // 3. 如果都没有，返回未找到提示
   return {
     translated_text: `[未找到翻译: ${text}]`,
     service: 'fallback',
