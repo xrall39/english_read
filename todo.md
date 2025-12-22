@@ -55,12 +55,23 @@
 ### 5. 翻译服务开发
 - [x] 实现混合翻译策略
   - [x] 本地词典查询（优先级最高）
+  - [x] 数据库词典查询（优先级次高）
   - [x] 在线翻译API集成（DeepLX）
   - [ ] AI翻译接口预留
 - [x] 开发翻译缓存机制
 - [x] 实现上下文感知翻译（context_hash）
 - [ ] 添加翻译质量评估
 - [ ] 翻译服务性能优化
+
+### 5.5 本地词典系统
+- [x] 数据库表设计（dictionaries, dictionary_entries）
+- [x] Python词典解析器（支持ECDICT CSV、JSON、MDX格式）
+- [x] 批量导入器（优化大规模数据导入）
+- [x] Python后端词典API（扫描、导入、查询、管理）
+- [x] Next.js API路由层（代理Python后端）
+- [x] 翻译服务集成词典查询
+- [x] 词典管理页面（/dictionary）
+- [x] Header添加词典入口
 
 ### 6. 前端基础组件
 - [x] 创建基础Layout组件（Header.tsx, MainLayout.tsx）
@@ -219,6 +230,18 @@ english_read/
 - 📋 下一步：用户认证、AI翻译服务
 
 ## 最近更新记录
+
+### 2025-12-22 更新（第二次）
+- 实现本地词典导入功能
+  - 数据库层：添加 dictionaries 和 dictionary_entries 表
+  - Python后端：创建词典解析器（支持ECDICT CSV、JSON、MDX格式）
+  - Python后端：创建批量导入器（优化大规模数据导入）
+  - Python后端：添加词典API路由（扫描、导入、查询、管理）
+  - Next.js API层：创建词典相关API路由
+  - 翻译服务：集成数据库词典查询（优先级次于本地词典）
+  - 前端：创建词典管理页面（/dictionary）
+  - 前端：Header添加词典入口
+  - 创建 data/dictionaries/ 目录用于存放词典文件
 
 ### 2025-12-22 更新
 - 集成DeepLX翻译服务

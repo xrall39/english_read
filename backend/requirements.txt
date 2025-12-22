@@ -5,3 +5,8 @@ textstat
 pydantic
 python-multipart
 httpx
+
+# 词典解析相关
+pandas>=2.0.0
+chardet>=5.0.0
+readmdict>=0.1.1

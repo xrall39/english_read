@@ -169,3 +169,71 @@ CREATE TRIGGER IF NOT EXISTS update_articles_updated_at
     BEGIN
         UPDATE articles SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
     END;
+
+-- =====================================================
+-- 词典系统表
+-- =====================================================
+
+-- 词典元数据表
+CREATE TABLE IF NOT EXISTS dictionaries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(100) NOT NULL UNIQUE,           -- 词典名称
+    description TEXT,                             -- 词典描述
+    source_format VARCHAR(20) NOT NULL,           -- 原始格式: mdx, ecdict, json, csv
+    source_file VARCHAR(500),                     -- 原始文件路径
+    version VARCHAR(50),                          -- 词典版本
+    author VARCHAR(100),                          -- 作者/来源
+    entry_count INTEGER DEFAULT 0,                -- 词条数量
+    file_size INTEGER,                            -- 原始文件大小(bytes)
+    language_from VARCHAR(10) DEFAULT 'en',       -- 源语言
+    language_to VARCHAR(10) DEFAULT 'zh',         -- 目标语言
+    priority INTEGER DEFAULT 100,                 -- 优先级(数字越小优先级越高)
+    is_enabled BOOLEAN DEFAULT TRUE,              -- 是否启用
+    is_builtin BOOLEAN DEFAULT FALSE,             -- 是否内置词典
+    import_status VARCHAR(20) DEFAULT 'pending',  -- 导入状态: pending, importing, completed, failed
+    import_progress REAL DEFAULT 0.0,             -- 导入进度 0.0-1.0
+    import_error TEXT,                            -- 导入错误信息
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 词条表（核心表，需要优化大规模数据存储）
+CREATE TABLE IF NOT EXISTS dictionary_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dictionary_id INTEGER NOT NULL,               -- 所属词典ID
+    word VARCHAR(200) NOT NULL,                   -- 单词（原形）
+    word_lower VARCHAR(200) NOT NULL,             -- 小写形式（用于查询）
+    phonetic_uk VARCHAR(200),                     -- 英式音标
+    phonetic_us VARCHAR(200),                     -- 美式音标
+    pos TEXT,                                     -- 词性（JSON数组: ["n.", "v.", "adj."]）
+    definition TEXT,                              -- 英文释义
+    translation TEXT NOT NULL,                    -- 中文翻译
+    exchange TEXT,                                -- 词形变化（JSON: {"past": "went", "done": "gone", ...}）
+    examples TEXT,                                -- 例句（JSON数组）
+    tags TEXT,                                    -- 标签（JSON数组: ["CET4", "TOEFL", ...]）
+    frequency INTEGER,                            -- 词频等级
+    collins_star INTEGER,                         -- 柯林斯星级 1-5
+    oxford_level VARCHAR(10),                     -- 牛津等级
+    bnc_rank INTEGER,                             -- BNC词频排名
+    frq_rank INTEGER,                             -- 当代语料库词频排名
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (dictionary_id) REFERENCES dictionaries(id) ON DELETE CASCADE
+);
+
+-- 词典相关索引
+CREATE INDEX IF NOT EXISTS idx_dictionaries_priority ON dictionaries(priority);
+CREATE INDEX IF NOT EXISTS idx_dictionaries_enabled ON dictionaries(is_enabled);
+CREATE INDEX IF NOT EXISTS idx_dictionaries_status ON dictionaries(import_status);
+
+-- 词条查询索引（针对大规模数据优化）
+CREATE INDEX IF NOT EXISTS idx_entries_word_lower ON dictionary_entries(word_lower);
+CREATE INDEX IF NOT EXISTS idx_entries_dict_word ON dictionary_entries(dictionary_id, word_lower);
+CREATE INDEX IF NOT EXISTS idx_entries_dictionary_id ON dictionary_entries(dictionary_id);
+
+-- 词典更新触发器
+CREATE TRIGGER IF NOT EXISTS update_dictionaries_updated_at
+    AFTER UPDATE ON dictionaries
+    FOR EACH ROW
+    BEGIN
+        UPDATE dictionaries SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+    END;
