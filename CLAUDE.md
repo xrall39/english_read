@@ -13,16 +13,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 cd frontend
 
 # 启动开发服务器
-npm run dev
+pnpm run dev
 
 # 构建生产版本
-npm run build
+pnpm run build
 
 # 启动生产服务器
-npm start
+pnpm start
 
 # 运行 ESLint 检查
-npm run lint
+pnpm run lint
 ```
 
 ### 后端开发命令
@@ -156,7 +156,8 @@ python test_api.py
 ## 开发约定
 
 ### 任务管理
-- 项目根目录下有 `todo.md` 文件用于跟踪开发任务
+- 项目根目录下有 `todo.md` 文件用于跟踪开发任务，使用 TodoWrite 工具跟踪多步骤任务
+- 优先编辑现有文件，而不是创建新文件
 - 开发前应将商量好的待办任务添加到文件中
 - 完成任务时标记为已完成以跟踪进度
 - 合理使用 Task 工具创建多个子代理并行开发
@@ -166,6 +167,20 @@ python test_api.py
 - 遵循 Next.js App Router 的文件约定
 - TypeScript 严格模式已启用
 - 使用 Geist 字体系列（Sans 和 Mono）
+
+### 复杂任务处理
+
+- **需求分析**: 使用 requirements-analyst 代理
+- **架构设计**: 使用 senior-code-architect 代理
+- **后端开发**: 使用 backend-architect 代理
+- **前端开发**: 使用 frontend-developer 代理
+- **代码审查**: 使用 code-reviewer 代理
+- **测试编写**: 使用 vitest-tester 代理
+
+### 信息获取
+
+- 需要搜索网络或不确定代码框架时，使用 exa mcp 服务
+- 优先查阅项目级 CLAUDE.md 了解项目特定上下文
 
 ### 翻译服务策略
 - **本地词典优先**：100+常用词汇，响应最快
