@@ -2,7 +2,7 @@
 
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
-import { BookOpen, Moon, Sun, Monitor } from 'lucide-react';
+import { BookOpen, Moon, Sun, Monitor, Book } from 'lucide-react';
 
 interface HeaderProps {
   className?: string;
@@ -81,6 +81,13 @@ export function Header({ className }: HeaderProps) {
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             历史
+          </a>
+          <a
+            href="/dictionary"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground flex items-center gap-1"
+          >
+            <Book className="h-4 w-4" />
+            词典
           </a>
         </nav>
 

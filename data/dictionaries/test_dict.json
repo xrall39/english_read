@@ -1,0 +1,12 @@
+{
+  "hello": "你好",
+  "world": "世界",
+  "test": "测试",
+  "dictionary": "词典",
+  "import": "导入",
+  "python": "Python编程语言",
+  "javascript": "JavaScript脚本语言",
+  "database": "数据库",
+  "algorithm": "算法",
+  "function": "函数"
+}

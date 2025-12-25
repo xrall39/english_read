@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import type { TranslateRequest, TranslateResponse } from '@/types/api';
 
+// NLP服务地址（用于词典查询）
+const NLP_SERVICE_URL = process.env.NLP_SERVICE_URL || 'http://localhost:8000';
+
 // 翻译服务配置
 const TRANSLATION_SERVICES = {
   // 本地词典（优先级最高）
@@ -9,9 +12,14 @@ const TRANSLATION_SERVICES = {
     enabled: true,
     priority: 1,
   },
+  // 数据库词典（优先级次高）
+  database_dict: {
+    enabled: true,
+    priority: 2,
+  },
   // 可以添加其他翻译服务
-  // google: { enabled: false, priority: 2 },
-  // baidu: { enabled: false, priority: 3 },
+  // google: { enabled: false, priority: 3 },
+  // baidu: { enabled: false, priority: 4 },
 };
 
 // 内存缓存（临时替代数据库缓存）
@@ -127,6 +135,71 @@ async function translateWithLocalDict(text: string): Promise<string | null> {
   return LOCAL_DICTIONARY[normalizedText] || null;
 }
 
+// 数据库词典查询
+interface DictionaryEntry {
+  word: string;
+  translation: string;
+  phonetic_uk?: string;
+  phonetic_us?: string;
+  pos?: string[];
+  definition?: string;
+  examples?: string[];
+  tags?: string[];
+  collins_star?: number;
+  dictionary_name?: string;
+}
+
+async function translateWithDatabaseDict(text: string): Promise<{
+  translation: string;
+  entry: DictionaryEntry;
+} | null> {
+  try {
+    const response = await fetch(
+      `${NLP_SERVICE_URL}/dictionary/lookup?word=${encodeURIComponent(text.trim())}`,
+      { cache: 'no-store' }
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (data.entries && data.entries.length > 0) {
+      const entry = data.entries[0] as DictionaryEntry;
+      return {
+        translation: entry.translation,
+        entry,
+      };
+    }
+    return null;
+  } catch (error) {
+    console.warn('数据库词典查询失败:', error);
+    return null;
+  }
+}
+
+// DeepLX 翻译服务
+async function translateWithDeepLX(text: string, targetLang: string): Promise<string | null> {
+  const apiUrl = process.env.DEEPLX_API_URL;
+  if (!apiUrl) return null;
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        source_lang: 'EN',
+        target_lang: targetLang.toUpperCase() === 'ZH' ? 'ZH' : targetLang.toUpperCase(),
+      }),
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.data || null;
+  } catch {
+    return null;
+  }
+}
+
 async function translateText(
   text: string,
   targetLanguage: string = 'zh',
@@ -135,8 +208,9 @@ async function translateText(
   translated_text: string;
   service: string;
   confidence: number;
+  dictionary_info?: DictionaryEntry;
 }> {
-  // 尝试本地词典
+  // 1. 尝试本地词典（优先级最高）
   const localTranslation = await translateWithLocalDict(text);
   if (localTranslation) {
     return {
@@ -146,7 +220,28 @@ async function translateText(
     };
   }
 
-  // 如果本地词典没有，返回原文（后续可以集成在线翻译服务）
+  // 2. 尝试数据库词典查询
+  const dictResult = await translateWithDatabaseDict(text);
+  if (dictResult) {
+    return {
+      translated_text: dictResult.translation,
+      service: `dictionary:${dictResult.entry.dictionary_name || 'unknown'}`,
+      confidence: 0.98,
+      dictionary_info: dictResult.entry,
+    };
+  }
+
+  // 3. 尝试 DeepLX 翻译服务
+  const deeplxTranslation = await translateWithDeepLX(text, targetLanguage);
+  if (deeplxTranslation) {
+    return {
+      translated_text: deeplxTranslation,
+      service: 'deeplx',
+      confidence: 0.95,
+    };
+  }
+
+  // 4. 如果都没有，返回未找到提示
   return {
     translated_text: `[未找到翻译: ${text}]`,
     service: 'fallback',

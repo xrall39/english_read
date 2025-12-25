@@ -3,7 +3,10 @@
 提供文本分析、句子分割、词性标注、命名实体识别等功能
 """
 
-from fastapi import FastAPI, HTTPException
+import os
+import sys
+from pathlib import Path
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
@@ -11,12 +14,18 @@ import spacy
 import logging
 from contextlib import asynccontextmanager
 
-# 配置日志
+# 词典相关导入
+from dictionary_parser import DictionaryParser, scan_dictionary_files
+from dictionary_importer import DictionaryImporter, get_importer
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # 全局变量存储spaCy模型
 nlp_model = None
+
+# 词典文件目录（相对于项目根目录）
+DICTIONARIES_DIR = Path(__file__).parent.parent / "data" / "dictionaries"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -270,6 +279,230 @@ async def extract_entities(text: str):
         "entities": entities,
         "count": len(entities)
     }
+
+# =====================================================
+# 词典管理API
+# =====================================================
+
+class DictionaryImportRequest(BaseModel):
+    """词典导入请求"""
+    file_name: str
+    name: str
+    description: str = ''
+    priority: int = 100
+
+class DictionaryUpdateRequest(BaseModel):
+    """词典更新请求"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[int] = None
+    is_enabled: Optional[bool] = None
+
+class WordLookupRequest(BaseModel):
+    """单词查询请求"""
+    word: str
+    dictionary_ids: Optional[List[int]] = None
+
+@app.get("/dictionary/scan")
+async def scan_dictionaries():
+    """
+    扫描可导入的词典文件
+
+    扫描 data/dictionaries/ 目录下的词典文件
+    """
+    # 确保目录存在
+    DICTIONARIES_DIR.mkdir(parents=True, exist_ok=True)
+
+    files = scan_dictionary_files(str(DICTIONARIES_DIR))
+    return {
+        "directory": str(DICTIONARIES_DIR),
+        "files": files,
+        "count": len(files)
+    }
+
+@app.get("/dictionary/list")
+async def list_dictionaries(enabled_only: bool = False):
+    """获取已导入的词典列表"""
+    importer = get_importer()
+    dictionaries = importer.get_all_dictionaries(enabled_only)
+    return {
+        "dictionaries": dictionaries,
+        "count": len(dictionaries)
+    }
+
+@app.get("/dictionary/lookup")
+async def lookup_word(word: str, dictionary_ids: Optional[str] = None):
+    """
+    查询单词
+
+    Args:
+        word: 要查询的单词
+        dictionary_ids: 指定词典ID，逗号分隔（可选）
+    """
+    if not word or not word.strip():
+        raise HTTPException(status_code=400, detail="单词不能为空")
+
+    importer = get_importer()
+
+    # 解析词典ID列表
+    dict_ids = None
+    if dictionary_ids:
+        try:
+            dict_ids = [int(id.strip()) for id in dictionary_ids.split(',')]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="无效的词典ID格式")
+
+    entries = importer.lookup_word(word.strip())
+
+    return {
+        "word": word,
+        "entries": entries,
+        "count": len(entries)
+    }
+
+@app.post("/dictionary/lookup")
+async def lookup_word_post(request: WordLookupRequest):
+    """查询单词（POST方式）"""
+    if not request.word or not request.word.strip():
+        raise HTTPException(status_code=400, detail="单词不能为空")
+
+    importer = get_importer()
+    entries = importer.lookup_word(request.word.strip())
+
+    return {
+        "word": request.word,
+        "entries": entries,
+        "count": len(entries)
+    }
+
+@app.get("/dictionary/{dictionary_id}")
+async def get_dictionary(dictionary_id: int):
+    """获取词典详情"""
+    importer = get_importer()
+    status = importer.get_import_status(dictionary_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="词典不存在")
+    return status
+
+@app.get("/dictionary/{dictionary_id}/status")
+async def get_dictionary_status(dictionary_id: int):
+    """获取词典导入状态"""
+    importer = get_importer()
+    status = importer.get_import_status(dictionary_id)
+    if not status:
+        raise HTTPException(status_code=404, detail="词典不存在")
+    return status
+
+@app.post("/dictionary/import")
+async def import_dictionary(request: DictionaryImportRequest, background_tasks: BackgroundTasks):
+    """
+    导入词典文件
+
+    从 data/dictionaries/ 目录导入指定的词典文件
+    """
+    file_path = DICTIONARIES_DIR / request.file_name
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"文件不存在: {request.file_name}")
+
+    # 检查文件格式
+    try:
+        file_info = DictionaryParser.get_file_info(str(file_path))
+        if file_info['format'] == 'unknown':
+            raise HTTPException(status_code=400, detail="不支持的文件格式")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"文件解析失败: {str(e)}")
+
+    importer = get_importer()
+
+    # 检查是否已存在同名词典
+    existing = importer.db.get_dictionary_by_name(request.name)
+    if existing:
+        raise HTTPException(status_code=400, detail=f"词典 '{request.name}' 已存在")
+
+    # 创建词典记录
+    dictionary_id = importer.db.create_dictionary(
+        name=request.name,
+        source_format=file_info['format'],
+        description=request.description,
+        source_file=str(file_path),
+        file_size=file_info['size'],
+        priority=request.priority,
+        import_status='pending',
+        import_progress=0.0
+    )
+
+    # 在后台执行导入
+    def do_import():
+        try:
+            importer.db.update_import_progress(dictionary_id, 0.0, 'importing')
+            importer.import_dictionary(
+                str(file_path),
+                request.name,
+                request.description,
+                request.priority
+            )
+        except Exception as e:
+            logger.error(f"导入词典失败: {e}")
+            importer.db.update_import_progress(dictionary_id, 0.0, 'failed', error=str(e))
+
+    # 由于词典记录已创建，需要删除后重新导入
+    importer.db.delete_dictionary(dictionary_id)
+
+    background_tasks.add_task(
+        importer.import_dictionary,
+        str(file_path),
+        request.name,
+        request.description,
+        request.priority
+    )
+
+    return {
+        "message": "导入任务已启动",
+        "file_name": request.file_name,
+        "name": request.name,
+        "format": file_info['format'],
+        "size_mb": file_info['size_mb']
+    }
+
+@app.put("/dictionary/{dictionary_id}")
+async def update_dictionary(dictionary_id: int, request: DictionaryUpdateRequest):
+    """更新词典信息"""
+    importer = get_importer()
+
+    # 检查词典是否存在
+    existing = importer.db.get_dictionary_by_id(dictionary_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="词典不存在")
+
+    # 构建更新字段
+    updates = {}
+    if request.name is not None:
+        updates['name'] = request.name
+    if request.description is not None:
+        updates['description'] = request.description
+    if request.priority is not None:
+        updates['priority'] = request.priority
+    if request.is_enabled is not None:
+        updates['is_enabled'] = request.is_enabled
+
+    if updates:
+        importer.update_dictionary(dictionary_id, **updates)
+
+    return {"message": "更新成功", "dictionary_id": dictionary_id}
+
+@app.delete("/dictionary/{dictionary_id}")
+async def delete_dictionary(dictionary_id: int):
+    """删除词典"""
+    importer = get_importer()
+
+    # 检查词典是否存在
+    existing = importer.db.get_dictionary_by_id(dictionary_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="词典不存在")
+
+    importer.delete_dictionary(dictionary_id)
+    return {"message": "删除成功", "dictionary_id": dictionary_id}
 
 if __name__ == "__main__":
     import uvicorn

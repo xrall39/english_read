@@ -634,3 +634,373 @@ class DatabaseManager:
                 VALUES (?, ?, ?, ?, ?)
             '''
             self.execute_insert(insert_query, (user_id, today, words_learned, vocabulary_reviewed, accuracy))
+
+    # ============================================
+    # 词典系统相关操作
+    # ============================================
+
+    def create_dictionary(self, name: str, source_format: str, **kwargs) -> int:
+        """
+        创建词典记录
+
+        Args:
+            name: 词典名称
+            source_format: 原始格式 (mdx, ecdict, json, csv)
+            **kwargs: 可选字段 (description, source_file, version, author, etc.)
+
+        Returns:
+            新创建词典的ID
+        """
+        fields = ['name', 'source_format']
+        values = [name, source_format]
+        placeholders = ['?', '?']
+
+        optional_fields = ['description', 'source_file', 'version', 'author',
+                          'entry_count', 'file_size', 'language_from', 'language_to',
+                          'priority', 'is_enabled', 'is_builtin', 'import_status',
+                          'import_progress', 'import_error']
+
+        for field in optional_fields:
+            if field in kwargs:
+                fields.append(field)
+                values.append(kwargs[field])
+                placeholders.append('?')
+
+        query = f'''
+            INSERT INTO dictionaries ({', '.join(fields)})
+            VALUES ({', '.join(placeholders)})
+        '''
+        return self.execute_insert(query, tuple(values))
+
+    def get_dictionary_by_id(self, dictionary_id: int) -> Optional[Dict]:
+        """根据ID获取词典"""
+        query = "SELECT * FROM dictionaries WHERE id = ?"
+        results = self.execute_query(query, (dictionary_id,))
+        return results[0] if results else None
+
+    def get_dictionary_by_name(self, name: str) -> Optional[Dict]:
+        """根据名称获取词典"""
+        query = "SELECT * FROM dictionaries WHERE name = ?"
+        results = self.execute_query(query, (name,))
+        return results[0] if results else None
+
+    def get_all_dictionaries(self, enabled_only: bool = False) -> List[Dict]:
+        """
+        获取所有词典列表
+
+        Args:
+            enabled_only: 是否只返回启用的词典
+
+        Returns:
+            词典列表，按优先级排序
+        """
+        if enabled_only:
+            query = '''
+                SELECT * FROM dictionaries
+                WHERE is_enabled = TRUE AND import_status = 'completed'
+                ORDER BY priority ASC, created_at ASC
+            '''
+        else:
+            query = '''
+                SELECT * FROM dictionaries
+                ORDER BY priority ASC, created_at ASC
+            '''
+        return self.execute_query(query)
+
+    def update_dictionary(self, dictionary_id: int, **kwargs) -> int:
+        """
+        更新词典信息
+
+        Args:
+            dictionary_id: 词典ID
+            **kwargs: 要更新的字段
+
+        Returns:
+            受影响的行数
+        """
+        if not kwargs:
+            return 0
+
+        allowed_fields = {'name', 'description', 'version', 'author', 'entry_count',
+                         'priority', 'is_enabled', 'import_status', 'import_progress',
+                         'import_error'}
+
+        updates = []
+        values = []
+        for field, value in kwargs.items():
+            if field in allowed_fields:
+                updates.append(f"{field} = ?")
+                values.append(value)
+
+        if not updates:
+            return 0
+
+        values.append(dictionary_id)
+        query = f'''
+            UPDATE dictionaries
+            SET {', '.join(updates)}
+            WHERE id = ?
+        '''
+        return self.execute_update(query, tuple(values))
+
+    def delete_dictionary(self, dictionary_id: int) -> int:
+        """
+        删除词典及其所有词条
+
+        Args:
+            dictionary_id: 词典ID
+
+        Returns:
+            受影响的行数
+        """
+        # 由于设置了 ON DELETE CASCADE，删除词典会自动删除相关词条
+        query = "DELETE FROM dictionaries WHERE id = ?"
+        return self.execute_update(query, (dictionary_id,))
+
+    def update_import_progress(self, dictionary_id: int, progress: float,
+                              status: str = 'importing', entry_count: int = None,
+                              error: str = None) -> None:
+        """
+        更新词典导入进度
+
+        Args:
+            dictionary_id: 词典ID
+            progress: 进度 (0.0 - 1.0)
+            status: 状态 (pending, importing, completed, failed)
+            entry_count: 已导入词条数
+            error: 错误信息
+        """
+        fields = ['import_progress = ?', 'import_status = ?']
+        values = [progress, status]
+
+        if entry_count is not None:
+            fields.append('entry_count = ?')
+            values.append(entry_count)
+
+        if error is not None:
+            fields.append('import_error = ?')
+            values.append(error)
+
+        values.append(dictionary_id)
+        query = f'''
+            UPDATE dictionaries
+            SET {', '.join(fields)}
+            WHERE id = ?
+        '''
+        self.execute_update(query, tuple(values))
+
+    # 词条相关操作
+
+    def add_dictionary_entry(self, dictionary_id: int, word: str, translation: str,
+                            **kwargs) -> int:
+        """
+        添加单个词条
+
+        Args:
+            dictionary_id: 词典ID
+            word: 单词
+            translation: 翻译
+            **kwargs: 可选字段
+
+        Returns:
+            新词条ID
+        """
+        fields = ['dictionary_id', 'word', 'word_lower', 'translation']
+        values = [dictionary_id, word, word.lower(), translation]
+        placeholders = ['?', '?', '?', '?']
+
+        optional_fields = ['phonetic_uk', 'phonetic_us', 'pos', 'definition',
+                          'exchange', 'examples', 'tags', 'frequency',
+                          'collins_star', 'oxford_level', 'bnc_rank', 'frq_rank']
+
+        for field in optional_fields:
+            if field in kwargs:
+                fields.append(field)
+                value = kwargs[field]
+                # JSON字段序列化
+                if field in ['pos', 'examples', 'tags', 'exchange'] and isinstance(value, (list, dict)):
+                    value = json.dumps(value, ensure_ascii=False)
+                values.append(value)
+                placeholders.append('?')
+
+        query = f'''
+            INSERT INTO dictionary_entries ({', '.join(fields)})
+            VALUES ({', '.join(placeholders)})
+        '''
+        return self.execute_insert(query, tuple(values))
+
+    def add_dictionary_entries_batch(self, dictionary_id: int, entries: List[Dict]) -> int:
+        """
+        批量添加词条（优化性能）
+
+        Args:
+            dictionary_id: 词典ID
+            entries: 词条列表，每个词条是一个字典
+
+        Returns:
+            插入的词条数
+        """
+        if not entries:
+            return 0
+
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 准备批量插入
+            query = '''
+                INSERT INTO dictionary_entries
+                (dictionary_id, word, word_lower, translation, phonetic_uk, phonetic_us,
+                 pos, definition, exchange, examples, tags, frequency, collins_star,
+                 oxford_level, bnc_rank, frq_rank)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            '''
+
+            batch_data = []
+            for entry in entries:
+                word = entry.get('word', '')
+                translation = entry.get('translation', '')
+
+                # 处理JSON字段
+                pos = entry.get('pos')
+                if isinstance(pos, (list, dict)):
+                    pos = json.dumps(pos, ensure_ascii=False)
+
+                exchange = entry.get('exchange')
+                if isinstance(exchange, (list, dict)):
+                    exchange = json.dumps(exchange, ensure_ascii=False)
+
+                examples = entry.get('examples')
+                if isinstance(examples, (list, dict)):
+                    examples = json.dumps(examples, ensure_ascii=False)
+
+                tags = entry.get('tags')
+                if isinstance(tags, (list, dict)):
+                    tags = json.dumps(tags, ensure_ascii=False)
+
+                batch_data.append((
+                    dictionary_id,
+                    word,
+                    word.lower(),
+                    translation,
+                    entry.get('phonetic_uk'),
+                    entry.get('phonetic_us'),
+                    pos,
+                    entry.get('definition'),
+                    exchange,
+                    examples,
+                    tags,
+                    entry.get('frequency'),
+                    entry.get('collins_star'),
+                    entry.get('oxford_level'),
+                    entry.get('bnc_rank'),
+                    entry.get('frq_rank')
+                ))
+
+            cursor.executemany(query, batch_data)
+            conn.commit()
+            return len(batch_data)
+
+    def lookup_word(self, word: str, dictionary_ids: List[int] = None) -> List[Dict]:
+        """
+        查询单词
+
+        Args:
+            word: 要查询的单词
+            dictionary_ids: 指定词典ID列表，为None则查询所有启用的词典
+
+        Returns:
+            匹配的词条列表，按词典优先级排序
+        """
+        word_lower = word.lower().strip()
+
+        if dictionary_ids:
+            placeholders = ','.join(['?' for _ in dictionary_ids])
+            query = f'''
+                SELECT de.*, d.name as dictionary_name, d.priority
+                FROM dictionary_entries de
+                JOIN dictionaries d ON de.dictionary_id = d.id
+                WHERE de.word_lower = ?
+                AND de.dictionary_id IN ({placeholders})
+                AND d.is_enabled = TRUE
+                ORDER BY d.priority ASC
+            '''
+            params = [word_lower] + dictionary_ids
+        else:
+            query = '''
+                SELECT de.*, d.name as dictionary_name, d.priority
+                FROM dictionary_entries de
+                JOIN dictionaries d ON de.dictionary_id = d.id
+                WHERE de.word_lower = ?
+                AND d.is_enabled = TRUE
+                AND d.import_status = 'completed'
+                ORDER BY d.priority ASC
+            '''
+            params = [word_lower]
+
+        results = self.execute_query(query, tuple(params))
+
+        # 解析JSON字段
+        for entry in results:
+            for field in ['pos', 'exchange', 'examples', 'tags']:
+                if entry.get(field):
+                    try:
+                        entry[field] = json.loads(entry[field])
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+        return results
+
+    def search_words(self, keyword: str, limit: int = 20,
+                    dictionary_ids: List[int] = None) -> List[Dict]:
+        """
+        搜索单词（前缀匹配）
+
+        Args:
+            keyword: 搜索关键词
+            limit: 返回数量限制
+            dictionary_ids: 指定词典ID列表
+
+        Returns:
+            匹配的词条列表
+        """
+        keyword_lower = keyword.lower().strip()
+        pattern = f'{keyword_lower}%'
+
+        if dictionary_ids:
+            placeholders = ','.join(['?' for _ in dictionary_ids])
+            query = f'''
+                SELECT de.word, de.translation, de.phonetic_uk, d.name as dictionary_name
+                FROM dictionary_entries de
+                JOIN dictionaries d ON de.dictionary_id = d.id
+                WHERE de.word_lower LIKE ?
+                AND de.dictionary_id IN ({placeholders})
+                AND d.is_enabled = TRUE
+                ORDER BY LENGTH(de.word) ASC, d.priority ASC
+                LIMIT ?
+            '''
+            params = [pattern] + dictionary_ids + [limit]
+        else:
+            query = '''
+                SELECT de.word, de.translation, de.phonetic_uk, d.name as dictionary_name
+                FROM dictionary_entries de
+                JOIN dictionaries d ON de.dictionary_id = d.id
+                WHERE de.word_lower LIKE ?
+                AND d.is_enabled = TRUE
+                AND d.import_status = 'completed'
+                ORDER BY LENGTH(de.word) ASC, d.priority ASC
+                LIMIT ?
+            '''
+            params = [pattern, limit]
+
+        return self.execute_query(query, tuple(params))
+
+    def get_dictionary_entry_count(self, dictionary_id: int) -> int:
+        """获取词典词条数量"""
+        query = "SELECT COUNT(*) as count FROM dictionary_entries WHERE dictionary_id = ?"
+        result = self.execute_query(query, (dictionary_id,))
+        return result[0]['count'] if result else 0
+
+    def delete_dictionary_entries(self, dictionary_id: int) -> int:
+        """删除词典的所有词条"""
+        query = "DELETE FROM dictionary_entries WHERE dictionary_id = ?"
+        return self.execute_update(query, (dictionary_id,))
