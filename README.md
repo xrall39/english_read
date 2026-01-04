@@ -61,8 +61,8 @@ NLP服务将在 http://localhost:8000 启动
 
 ```bash
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 前端应用将在 http://localhost:3000 启动
